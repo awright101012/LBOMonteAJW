@@ -236,38 +236,42 @@ def plot_distribution(data, title):
 
     # Add mean line
     fig.add_vline(x=mean_value, line_dash="dash", line_color="red",
-                  annotation_text=f"Mean: {mean_value:.2%}", 
+                  annotation_text=f"Mean: {mean_value:.2f}x" if title == 'MOIC' else f"Mean: {mean_value:.2%}", 
                   annotation_position="top right")
 
     # Add median line
     fig.add_vline(x=median_value, line_dash="dash", line_color="green",
-                  annotation_text=f"Median: {median_value:.2%}", 
+                  annotation_text=f"Median: {median_value:.2f}x" if title == 'MOIC' else f"Median: {median_value:.2%}", 
                   annotation_position="top left")
 
     # Update layout
     fig.update_layout(
-        title_text=f'{title} Distribution',
+        title_text=f'Monte Carlo Simulation of LBO {title}',
         xaxis_title=title,
         yaxis_title='Frequency',
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
     )
+
+    if title == 'MOIC':
+        fig.update_xaxes(tickformat=".2f", ticksuffix="x")
 
     return fig
 
-def calculate_probability_distribution(data, bins=10):
-    """
-    Calculate the probability distribution of the data.
-
-    Args:
-        data (array-like): Data to calculate distribution.
-        bins (int): Number of bins.
-
-    Returns:
-        pd.DataFrame: Probability distribution DataFrame.
-    """
+def calculate_probability_distribution(data, bins=10, is_moic=False):
+    """Calculate the probability distribution of the data."""
     counts, bin_edges = np.histogram(data, bins=bins)
     probabilities = counts / len(data)
-    bin_labels = [f"{bin_edges[i]:.2%} to {bin_edges[i+1]:.2%}" for i in range(len(bin_edges)-1)]
+    if is_moic:
+        bin_labels = [f"{bin_edges[i]:.2f}x to {bin_edges[i+1]:.2f}x" for i in range(len(bin_edges)-1)]
+    else:
+        bin_labels = [f"{bin_edges[i]:.2%} to {bin_edges[i+1]:.2%}" for i in range(len(bin_edges)-1)]
     return pd.DataFrame({'Range': bin_labels, 'Probability': probabilities})
 
 def get_excel_download_link(results):
@@ -473,7 +477,18 @@ def main():
         with col1:
             st.write("#### IRR Statistics")
             df_irr_stats = pd.DataFrame(irr_results, columns=['IRR'])
-            st.dataframe(df_irr_stats.describe(percentiles=[0.1, 0.25, 0.5, 0.75, 0.9]).transpose().style.format("{:.2%}"))
+            st.dataframe(df_irr_stats.describe(percentiles=[0.1, 0.25, 0.5, 0.75, 0.9]).transpose().style.format({
+                'count': '{:.0f}',
+                'mean': '{:.2%}',
+                'std': '{:.2%}',
+                'min': '{:.2%}',
+                '10%': '{:.2%}',
+                '25%': '{:.2%}',
+                '50%': '{:.2%}',
+                '75%': '{:.2%}',
+                '90%': '{:.2%}',
+                'max': '{:.2%}'
+            }))
 
             st.write("#### IRR Probability Distribution")
             irr_prob_dist = calculate_probability_distribution(irr_results, bins=10)
@@ -482,11 +497,25 @@ def main():
         with col2:
             st.write("#### MOIC Statistics")
             df_moic_stats = pd.DataFrame(moic_results, columns=['MOIC'])
-            st.dataframe(df_moic_stats.describe(percentiles=[0.1, 0.25, 0.5, 0.75, 0.9]).transpose().style.format("{:.2f}"))
+            st.dataframe(df_moic_stats.describe(percentiles=[0.1, 0.25, 0.5, 0.75, 0.9]).transpose().style.format({
+                'count': '{:.0f}',
+                'mean': '{:.2f}x',
+                'std': '{:.2f}x',
+                'min': '{:.2f}x',
+                '10%': '{:.2f}x',
+                '25%': '{:.2f}x',
+                '50%': '{:.2f}x',
+                '75%': '{:.2f}x',
+                '90%': '{:.2f}x',
+                'max': '{:.2f}x'
+            }))
 
             st.write("#### MOIC Probability Distribution")
-            moic_prob_dist = calculate_probability_distribution(moic_results, bins=10)
-            st.dataframe(moic_prob_dist.style.format({'Probability': '{:.2%}'}))
+            moic_prob_dist = calculate_probability_distribution(moic_results, bins=10, is_moic=True)
+            st.dataframe(moic_prob_dist.style.format({
+                'Range': lambda x: x.replace(' to ', 'x to ') + 'x',
+                'Probability': '{:.2%}'
+            }))
 
         # Export Results
         if st.button("Export Results"):
