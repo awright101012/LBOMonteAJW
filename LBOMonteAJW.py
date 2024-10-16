@@ -329,18 +329,31 @@ def main():
 
     st.sidebar.header("LBO Model Parameters")
     initial_revenue = st.sidebar.number_input("Initial Revenue ($M)", min_value=50.0, max_value=1000.0, value=100.0, step=10.0)
-    ebitda_margin = st.sidebar.slider("EBITDA Margin", 0.05, 0.8, 0.2, 0.01)
-    revenue_growth = st.sidebar.slider("Revenue Growth Rate", 0.01, 0.60, 0.05, 0.01)
-    tax_rate = st.sidebar.slider("Tax Rate", 0.1, 0.4, 0.25, 0.01)
-    capex_percent = st.sidebar.slider("CapEx (% of Revenue)", 0.01, 0.2, 0.05, 0.01)
-    nwc_percent = st.sidebar.slider("Net Working Capital (% of Revenue)", 0.05, 0.4, 0.1, 0.01)
-    entry_multiple = st.sidebar.slider("Entry Multiple", 1.0, 15.0, 8.0, 0.5)  # Updated max value to 15.0
-    exit_multiple = st.sidebar.slider("Exit Multiple", 1.0, 15.0, 6.0, 0.5)  # Updated max value to 15.0
-    debt_to_ebitda = st.sidebar.slider("Debt to EBITDA", 1.0, 15.0, 5.0, 0.5)  # Updated max value to 15.0
-    interest_rate = st.sidebar.slider("Interest Rate", 0.03, 0.25, 0.06, 0.005)
-    loan_term = st.sidebar.slider("Loan Term (Years)", 5, 20, 7, 1)
-    amortization_rate = st.sidebar.slider("Annual Amortization Rate", 0.05, 0.3125, 0.1, 0.01)
-    projection_years = st.sidebar.slider("Projection Years", 3, 15, 5, 1)
+
+    st.sidebar.subheader("Enter Percentages (%)")
+    ebitda_margin_percent = st.sidebar.number_input("EBITDA Margin (%)", min_value=0.0, max_value=100.0, value=20.0, step=1.0)
+    revenue_growth_percent = st.sidebar.number_input("Revenue Growth Rate (%)", min_value=0.0, max_value=100.0, value=5.0, step=1.0)
+    tax_rate_percent = st.sidebar.number_input("Tax Rate (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0)
+    capex_percent_percent = st.sidebar.number_input("CapEx (% of Revenue)", min_value=0.0, max_value=100.0, value=5.0, step=1.0)
+    nwc_percent_percent = st.sidebar.number_input("Net Working Capital (% of Revenue)", min_value=0.0, max_value=100.0, value=10.0, step=1.0)
+    interest_rate_percent = st.sidebar.number_input("Interest Rate (%)", min_value=0.0, max_value=100.0, value=6.0, step=0.5)
+    amortization_rate_percent = st.sidebar.number_input("Annual Amortization Rate (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0)
+
+    st.sidebar.subheader("Other Parameters")
+    entry_multiple = st.sidebar.number_input("Entry Multiple", min_value=0.0, max_value=50.0, value=8.0, step=0.5)
+    exit_multiple = st.sidebar.number_input("Exit Multiple", min_value=0.0, max_value=50.0, value=10.0, step=0.5)
+    debt_to_ebitda = st.sidebar.number_input("Debt to EBITDA", min_value=0.0, max_value=50.0, value=5.0, step=0.5)
+    loan_term = st.sidebar.number_input("Loan Term (Years)", min_value=1, max_value=50, value=7, step=1)
+    projection_years = st.sidebar.number_input("Projection Years", min_value=1, max_value=50, value=5, step=1)
+
+    # Convert percentage inputs to decimals
+    ebitda_margin = ebitda_margin_percent / 100.0
+    revenue_growth = revenue_growth_percent / 100.0
+    tax_rate = tax_rate_percent / 100.0
+    capex_percent = capex_percent_percent / 100.0
+    nwc_percent = nwc_percent_percent / 100.0
+    interest_rate = interest_rate_percent / 100.0
+    amortization_rate = amortization_rate_percent / 100.0
 
     lbo_params = {
         'initial_revenue': initial_revenue,
@@ -367,16 +380,14 @@ def main():
     st.sidebar.write("#### Revenue Growth Rate")
     rev_growth_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='rev_growth_dist')
     if rev_growth_dist == "Normal":
-        rev_growth_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='rev_growth_std_scale')
-        rev_growth_std = revenue_growth * (rev_growth_std_scale * 0.1)  # 10% to 50% of mean
+        rev_growth_std = st.sidebar.number_input("Standard Deviation Factor", min_value=0.1, max_value=10.0, value=0.5, step=0.1, key='rev_growth_std')
         simulation_params['revenue_growth'] = {
             'distribution': 'normal',
             'mean': revenue_growth,
-            'std': rev_growth_std
+            'std': rev_growth_std * revenue_growth
         }
     elif rev_growth_dist == "Uniform":
-        rev_growth_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='rev_growth_range_scale')
-        rev_growth_range = revenue_growth * (rev_growth_range_scale * 0.1)  # 10% to 50% of mean
+        rev_growth_range = st.sidebar.number_input("Range", min_value=0.01, max_value=0.5, value=0.1, step=0.01, key='rev_growth_range')
         simulation_params['revenue_growth'] = {
             'distribution': 'uniform',
             'low': max(0, revenue_growth - rev_growth_range),
@@ -386,16 +397,14 @@ def main():
     st.sidebar.write("#### EBITDA Margin")
     ebitda_margin_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='ebitda_margin_dist')
     if ebitda_margin_dist == "Normal":
-        ebitda_margin_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='ebitda_margin_std_scale')
-        ebitda_margin_std = ebitda_margin * (ebitda_margin_std_scale * 0.1)  # 10% to 50% of mean
+        ebitda_margin_std = st.sidebar.number_input("Standard Deviation Factor", min_value=0.1, max_value=10.0, value=0.5, step=0.1, key='ebitda_margin_std')
         simulation_params['ebitda_margin'] = {
             'distribution': 'normal',
             'mean': ebitda_margin,
-            'std': ebitda_margin_std
+            'std': ebitda_margin_std * ebitda_margin
         }
     elif ebitda_margin_dist == "Uniform":
-        ebitda_margin_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='ebitda_margin_range_scale')
-        ebitda_margin_range = ebitda_margin * (ebitda_margin_range_scale * 0.1)  # 10% to 50% of mean
+        ebitda_margin_range = st.sidebar.number_input("Range", min_value=0.01, max_value=0.5, value=0.05, step=0.01, key='ebitda_margin_range')
         simulation_params['ebitda_margin'] = {
             'distribution': 'uniform',
             'low': max(0, ebitda_margin - ebitda_margin_range),
@@ -405,24 +414,21 @@ def main():
     st.sidebar.write("#### Exit Multiple")
     exit_multiple_dist = st.sidebar.selectbox("Distribution", ["Normal", "Lognormal", "Uniform"], key='exit_multiple_dist')
     if exit_multiple_dist == "Normal":
-        exit_multiple_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='exit_multiple_std_scale')
-        exit_multiple_std = exit_multiple * (exit_multiple_std_scale * 0.1)  # 10% to 50% of mean
+        exit_multiple_std = st.sidebar.number_input("Standard Deviation Factor", min_value=0.1, max_value=10.0, value=0.5, step=0.1, key='exit_multiple_std_normal')
         simulation_params['exit_multiple'] = {
             'distribution': 'normal',
             'mean': exit_multiple,
-            'std': exit_multiple_std
+            'std': exit_multiple_std * exit_multiple
         }
     elif exit_multiple_dist == "Lognormal":
-        exit_multiple_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='exit_multiple_lognormal_std_scale')
-        exit_multiple_std = exit_multiple * (exit_multiple_std_scale * 0.1)  # 10% to 50% of mean
+        exit_multiple_std = st.sidebar.number_input("Standard Deviation Factor", min_value=0.1, max_value=10.0, value=0.5, step=0.1, key='exit_multiple_std_lognormal')
         simulation_params['exit_multiple'] = {
             'distribution': 'lognormal',
             'mean': exit_multiple,
-            'std': exit_multiple_std
+            'std': exit_multiple_std * exit_multiple
         }
     elif exit_multiple_dist == "Uniform":
-        exit_multiple_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='exit_multiple_range_scale')
-        exit_multiple_range = exit_multiple * (exit_multiple_range_scale * 0.1)  # 10% to 50% of mean
+        exit_multiple_range = st.sidebar.number_input("Range", min_value=0.5, max_value=10.0, value=1.0, step=0.1, key='exit_multiple_range')
         simulation_params['exit_multiple'] = {
             'distribution': 'uniform',
             'low': max(0, exit_multiple - exit_multiple_range),
@@ -432,16 +438,14 @@ def main():
     st.sidebar.write("#### Debt to EBITDA")
     debt_to_ebitda_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='debt_to_ebitda_dist')
     if debt_to_ebitda_dist == "Normal":
-        debt_to_ebitda_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='debt_to_ebitda_std_scale')
-        debt_to_ebitda_std = debt_to_ebitda * (debt_to_ebitda_std_scale * 0.1)  # 10% to 50% of mean
+        debt_to_ebitda_std = st.sidebar.number_input("Standard Deviation Factor", min_value=0.1, max_value=10.0, value=0.5, step=0.1, key='debt_to_ebitda_std')
         simulation_params['debt_to_ebitda'] = {
             'distribution': 'normal',
             'mean': debt_to_ebitda,
-            'std': debt_to_ebitda_std
+            'std': debt_to_ebitda_std * debt_to_ebitda
         }
     elif debt_to_ebitda_dist == "Uniform":
-        debt_to_ebitda_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='debt_to_ebitda_range_scale')
-        debt_to_ebitda_range = debt_to_ebitda * (debt_to_ebitda_range_scale * 0.1)  # 10% to 50% of mean
+        debt_to_ebitda_range = st.sidebar.number_input("Range", min_value=0.5, max_value=10.0, value=0.5, step=0.1, key='debt_to_ebitda_range')
         simulation_params['debt_to_ebitda'] = {
             'distribution': 'uniform',
             'low': max(0, debt_to_ebitda - debt_to_ebitda_range),
@@ -455,17 +459,23 @@ def main():
             st.error(error)
         st.stop()
 
-    if st.button("Run Simulation"):
-        st.write("## Simulation Results")
-        progress_text = st.empty()
-        progress_bar = st.progress(0)
-        results = run_monte_carlo(num_simulations, lbo_params, simulation_params)
-        progress_bar.progress(100)
-        progress_text.text("Simulation complete.")
+    run_simulation = st.button("Run Simulation")
+
+    if run_simulation or ('results' in st.session_state and st.session_state.results is not None):
+        if run_simulation:
+            st.write("## Simulation Results")
+            progress_text = st.empty()
+            progress_bar = st.progress(0)
+            results = run_monte_carlo(num_simulations, lbo_params, simulation_params)
+            progress_bar.progress(100)
+            progress_text.text("Simulation complete.")
+            st.session_state.results = results
+        else:
+            results = st.session_state.results
 
         # Remove NaN values from results
-        irr_results = results['IRR'][~np.isnan(results['IRR'])]
-        moic_results = results['MOIC'][~np.isnan(results['MOIC'])]
+        irr_results = results['IRR']
+        moic_results = results['MOIC']
 
         # Display IRR Distribution
         st.write("### Internal Rate of Return (IRR) Distribution")
