@@ -266,6 +266,13 @@ def plot_distribution(data, title):
 
 def calculate_probability_distribution(data, bins=10, is_moic=False):
     """Calculate the probability distribution of the data."""
+    # Filter out NaN values
+    data = data[~np.isnan(data)]
+    
+    # Check if there's any data left after filtering
+    if len(data) == 0:
+        return pd.DataFrame({'Range': [], 'Probability': []})
+    
     counts, bin_edges = np.histogram(data, bins=bins)
     probabilities = counts / len(data)
     if is_moic:
@@ -476,6 +483,10 @@ def main():
         # Remove NaN values from results
         irr_results = results['IRR']
         moic_results = results['MOIC']
+
+        # Filter out NaN values
+        irr_results = irr_results[~np.isnan(irr_results)]
+        moic_results = moic_results[~np.isnan(moic_results)]
 
         # Display IRR Distribution
         st.write("### Internal Rate of Return (IRR) Distribution")
