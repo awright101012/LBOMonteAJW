@@ -331,12 +331,12 @@ def main():
     initial_revenue = st.sidebar.number_input("Initial Revenue ($M)", min_value=50.0, max_value=1000.0, value=100.0, step=10.0)
     ebitda_margin = st.sidebar.slider("EBITDA Margin", 0.05, 0.8, 0.2, 0.01)
     revenue_growth = st.sidebar.slider("Revenue Growth Rate", 0.01, 0.60, 0.05, 0.01)
-    tax_rate = st.sidebar.slider("Tax Rate", 0.1, 0.625, 0.25, 0.01)
+    tax_rate = st.sidebar.slider("Tax Rate", 0.1, 0.4, 0.25, 0.01)
     capex_percent = st.sidebar.slider("CapEx (% of Revenue)", 0.01, 0.2, 0.05, 0.01)
     nwc_percent = st.sidebar.slider("Net Working Capital (% of Revenue)", 0.05, 0.4, 0.1, 0.01)
-    entry_multiple = st.sidebar.slider("Entry Multiple", 3.0, 25.0, 8.0, 0.5)
-    exit_multiple = st.sidebar.slider("Exit Multiple", 2.0, 10.0, 6.0, 0.5)
-    debt_to_ebitda = st.sidebar.slider("Debt to EBITDA", 3.0, 10.9375, 5.0, 0.5)
+    entry_multiple = st.sidebar.slider("Entry Multiple", 1.0, 15.0, 8.0, 0.5)  # Updated max value to 15.0
+    exit_multiple = st.sidebar.slider("Exit Multiple", 1.0, 15.0, 6.0, 0.5)  # Updated max value to 15.0
+    debt_to_ebitda = st.sidebar.slider("Debt to EBITDA", 1.0, 15.0, 5.0, 0.5)  # Updated max value to 15.0
     interest_rate = st.sidebar.slider("Interest Rate", 0.03, 0.25, 0.06, 0.005)
     loan_term = st.sidebar.slider("Loan Term (Years)", 5, 20, 7, 1)
     amortization_rate = st.sidebar.slider("Annual Amortization Rate", 0.05, 0.3125, 0.1, 0.01)
@@ -367,80 +367,85 @@ def main():
     st.sidebar.write("#### Revenue Growth Rate")
     rev_growth_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='rev_growth_dist')
     if rev_growth_dist == "Normal":
-        rev_growth_std = st.sidebar.slider("Std Dev", 0.01, 0.375, 0.02, 0.005, key='rev_growth_std')
+        rev_growth_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='rev_growth_std_scale')
+        rev_growth_std = revenue_growth * (rev_growth_std_scale * 0.1)  # 10% to 50% of mean
         simulation_params['revenue_growth'] = {
             'distribution': 'normal',
             'mean': revenue_growth,
             'std': rev_growth_std
         }
     elif rev_growth_dist == "Uniform":
-        rev_growth_low = st.sidebar.number_input("Low", value=revenue_growth - 0.075, step=0.005, key='rev_growth_low')
-        rev_growth_high = st.sidebar.number_input("High", value=revenue_growth + 0.075, step=0.005, key='rev_growth_high')
+        rev_growth_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='rev_growth_range_scale')
+        rev_growth_range = revenue_growth * (rev_growth_range_scale * 0.1)  # 10% to 50% of mean
         simulation_params['revenue_growth'] = {
             'distribution': 'uniform',
-            'low': rev_growth_low,
-            'high': rev_growth_high
+            'low': max(0, revenue_growth - rev_growth_range),
+            'high': revenue_growth + rev_growth_range
         }
 
     st.sidebar.write("#### EBITDA Margin")
     ebitda_margin_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='ebitda_margin_dist')
     if ebitda_margin_dist == "Normal":
-        ebitda_margin_std = st.sidebar.slider("Std Dev", 0.01, 0.375, 0.02, 0.005, key='ebitda_margin_std')
+        ebitda_margin_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='ebitda_margin_std_scale')
+        ebitda_margin_std = ebitda_margin * (ebitda_margin_std_scale * 0.1)  # 10% to 50% of mean
         simulation_params['ebitda_margin'] = {
             'distribution': 'normal',
             'mean': ebitda_margin,
             'std': ebitda_margin_std
         }
     elif ebitda_margin_dist == "Uniform":
-        ebitda_margin_low = st.sidebar.number_input("Low", value=ebitda_margin - 0.075, step=0.005, key='ebitda_margin_low')
-        ebitda_margin_high = st.sidebar.number_input("High", value=ebitda_margin + 0.075, step=0.005, key='ebitda_margin_high')
+        ebitda_margin_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='ebitda_margin_range_scale')
+        ebitda_margin_range = ebitda_margin * (ebitda_margin_range_scale * 0.1)  # 10% to 50% of mean
         simulation_params['ebitda_margin'] = {
             'distribution': 'uniform',
-            'low': ebitda_margin_low,
-            'high': ebitda_margin_high
+            'low': max(0, ebitda_margin - ebitda_margin_range),
+            'high': min(1, ebitda_margin + ebitda_margin_range)
         }
 
     st.sidebar.write("#### Exit Multiple")
     exit_multiple_dist = st.sidebar.selectbox("Distribution", ["Normal", "Lognormal", "Uniform"], key='exit_multiple_dist')
     if exit_multiple_dist == "Normal":
-        exit_multiple_std = st.sidebar.slider("Std Dev", 0.5, 11.25, 1.0, 0.1, key='exit_multiple_std')
+        exit_multiple_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='exit_multiple_std_scale')
+        exit_multiple_std = exit_multiple * (exit_multiple_std_scale * 0.1)  # 10% to 50% of mean
         simulation_params['exit_multiple'] = {
             'distribution': 'normal',
             'mean': exit_multiple,
             'std': exit_multiple_std
         }
     elif exit_multiple_dist == "Lognormal":
-        exit_multiple_std = st.sidebar.slider("Std Dev", 0.5, 11.25, 1.0, 0.1, key='exit_multiple_lognormal_std')
+        exit_multiple_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='exit_multiple_lognormal_std_scale')
+        exit_multiple_std = exit_multiple * (exit_multiple_std_scale * 0.1)  # 10% to 50% of mean
         simulation_params['exit_multiple'] = {
             'distribution': 'lognormal',
             'mean': exit_multiple,
             'std': exit_multiple_std
         }
     elif exit_multiple_dist == "Uniform":
-        exit_multiple_low = st.sidebar.number_input("Low", value=exit_multiple - 3.75, step=0.1, key='exit_multiple_low')
-        exit_multiple_high = st.sidebar.number_input("High", value=exit_multiple + 3.75, step=0.1, key='exit_multiple_high')
+        exit_multiple_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='exit_multiple_range_scale')
+        exit_multiple_range = exit_multiple * (exit_multiple_range_scale * 0.1)  # 10% to 50% of mean
         simulation_params['exit_multiple'] = {
             'distribution': 'uniform',
-            'low': exit_multiple_low,
-            'high': exit_multiple_high
+            'low': max(0, exit_multiple - exit_multiple_range),
+            'high': exit_multiple + exit_multiple_range
         }
 
     st.sidebar.write("#### Debt to EBITDA")
     debt_to_ebitda_dist = st.sidebar.selectbox("Distribution", ["Normal", "Uniform"], key='debt_to_ebitda_dist')
     if debt_to_ebitda_dist == "Normal":
-        debt_to_ebitda_std = st.sidebar.slider("Std Dev", 0.1, 3.75, 0.2, 0.05, key='debt_to_ebitda_std')
+        debt_to_ebitda_std_scale = st.sidebar.slider("Variability (1-5)", 1, 5, 2, 1, key='debt_to_ebitda_std_scale')
+        debt_to_ebitda_std = debt_to_ebitda * (debt_to_ebitda_std_scale * 0.1)  # 10% to 50% of mean
         simulation_params['debt_to_ebitda'] = {
             'distribution': 'normal',
             'mean': debt_to_ebitda,
             'std': debt_to_ebitda_std
         }
     elif debt_to_ebitda_dist == "Uniform":
-        debt_to_ebitda_low = st.sidebar.number_input("Low", value=debt_to_ebitda - 1.875, step=0.1, key='debt_to_ebitda_low')
-        debt_to_ebitda_high = st.sidebar.number_input("High", value=debt_to_ebitda + 1.875, step=0.1, key='debt_to_ebitda_high')
+        debt_to_ebitda_range_scale = st.sidebar.slider("Range (1-5)", 1, 5, 2, 1, key='debt_to_ebitda_range_scale')
+        debt_to_ebitda_range = debt_to_ebitda * (debt_to_ebitda_range_scale * 0.1)  # 10% to 50% of mean
         simulation_params['debt_to_ebitda'] = {
             'distribution': 'uniform',
-            'low': debt_to_ebitda_low,
-            'high': debt_to_ebitda_high
+            'low': max(0, debt_to_ebitda - debt_to_ebitda_range),
+            'high': debt_to_ebitda + debt_to_ebitda_range
         }
 
     # Validate inputs
